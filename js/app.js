@@ -1075,7 +1075,11 @@ class TodoList {
             const taskId = taskItem.getAttribute('data-task-id');
             const action = target.getAttribute('data-action');
 
-            if (action === 'delete') {
+            // Handle checkbox toggle
+            if (target.type === 'checkbox' || action === 'toggle') {
+              this.toggleTask(taskId);
+              this.render(); // Re-render to update UI
+            } else if (action === 'delete') {
               const success = this.deleteTask(taskId);
               if (success) {
                 this.render(); // Re-render to remove task
@@ -1103,9 +1107,6 @@ class TodoList {
                   alert('Failed to edit task');
                 }
               }
-            } else if (action === 'toggle') {
-              this.toggleTask(taskId);
-              this.render(); // Re-render to update UI
             }
           });
         }
