@@ -862,6 +862,143 @@ class TodoList {
     return true;
   }
 
+  /**
+   * Show edit modal for task
+   * @param {string} taskId - Task identifier
+   * @param {string} currentText - Current task text
+   */
+  showEditModal(taskId, currentText) {
+    // Create modal overlay
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay';
+    
+    // Create modal container
+    const modal = document.createElement('div');
+    modal.className = 'modal-container';
+    
+    // Create modal header
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'modal-header';
+    
+    const modalTitle = document.createElement('h3');
+    modalTitle.textContent = 'Edit Task';
+    modalHeader.appendChild(modalTitle);
+    
+    // Create modal body
+    const modalBody = document.createElement('div');
+    modalBody.className = 'modal-body';
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'modal-input';
+    input.value = currentText;
+    input.maxLength = 200;
+    
+    const charCount = document.createElement('div');
+    charCount.className = 'modal-char-count';
+    charCount.textContent = `${currentText.length}/200`;
+    
+    input.addEventListener('input', () => {
+      charCount.textContent = `${input.value.length}/200`;
+    });
+    
+    const errorMsg = document.createElement('div');
+    errorMsg.className = 'modal-error';
+    errorMsg.style.display = 'none';
+    
+    modalBody.appendChild(input);
+    modalBody.appendChild(charCount);
+    modalBody.appendChild(errorMsg);
+    
+    // Create modal footer
+    const modalFooter = document.createElement('div');
+    modalFooter.className = 'modal-footer';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'modal-btn modal-btn-cancel';
+    cancelBtn.textContent = 'Cancel';
+    
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'modal-btn modal-btn-save';
+    saveBtn.textContent = 'Save';
+    
+    modalFooter.appendChild(cancelBtn);
+    modalFooter.appendChild(saveBtn);
+    
+    // Assemble modal
+    modal.appendChild(modalHeader);
+    modal.appendChild(modalBody);
+    modal.appendChild(modalFooter);
+    modalOverlay.appendChild(modal);
+    
+    // Add to document
+    document.body.appendChild(modalOverlay);
+    
+    // Focus input and select text
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 100);
+    
+    // Close modal function
+    const closeModal = () => {
+      modalOverlay.remove();
+    };
+    
+    // Cancel button handler
+    cancelBtn.addEventListener('click', closeModal);
+    
+    // Click outside to close
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) {
+        closeModal();
+      }
+    });
+    
+    // Save button handler
+    const saveTask = () => {
+      const newText = input.value;
+      
+      if (!newText || newText.trim().length === 0) {
+        errorMsg.textContent = 'Task cannot be empty';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      
+      if (newText.length > 200) {
+        errorMsg.textContent = 'Task text exceeds maximum length of 200 characters';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      
+      const success = this.editTask(taskId, newText);
+      if (success) {
+        closeModal();
+        this.render();
+      } else {
+        errorMsg.textContent = 'Failed to edit task';
+        errorMsg.style.display = 'block';
+      }
+    };
+    
+    saveBtn.addEventListener('click', saveTask);
+    
+    // Enter key to save
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        saveTask();
+      }
+    });
+    
+    // Escape key to cancel
+    document.addEventListener('keydown', function escapeHandler(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+        document.removeEventListener('keydown', escapeHandler);
+      }
+    });
+  }
+
     /**
      * Render the todo list UI
      * Creates task list DOM structure dynamically
@@ -1090,23 +1227,7 @@ class TodoList {
               const task = this.tasks.find(t => t.id === taskId);
               if (!task) return;
 
-              const newText = prompt('Edit task:', task.text);
-              if (newText !== null) {
-                if (!newText || newText.trim().length === 0) {
-                  alert('Task cannot be empty');
-                  return;
-                }
-                if (newText.length > 200) {
-                  alert('Task text exceeds maximum length of 200 characters');
-                  return;
-                }
-                const success = this.editTask(taskId, newText);
-                if (success) {
-                  this.render(); // Re-render to show updated task
-                } else {
-                  alert('Failed to edit task');
-                }
-              }
+              this.showEditModal(taskId, task.text);
             }
           });
         }

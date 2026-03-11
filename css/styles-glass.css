@@ -196,3 +196,31 @@
   border-radius: var(--border-radius-sm) !important;
   border: 1px solid rgba(239, 68, 68, 0.3) !important;
 }
+
+
+/* Modal glassmorphism */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.modal-container {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 20px 60px rgba(31, 38, 135, 0.4) !important;
+}
+
+.modal-input {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 2px solid rgba(99, 102, 241, 0.3) !important;
+}
+
+.modal-input:focus {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(99, 102, 241, 0.6) !important;
+}
