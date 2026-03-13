@@ -1,6 +1,97 @@
 // Productivity Dashboard Application
 
 /**
+ * Theme Management System
+ * Supports light and dark modes with localStorage persistence
+ */
+
+class ThemeManager {
+  constructor() {
+    this.THEME_KEY = 'dashboard-theme';
+    this.DARK_MODE_CLASS = 'dark-mode';
+    this.initTheme();
+    this.setupThemeToggle();
+  }
+
+  /**
+   * Initialize theme - load from localStorage or use system preference
+   */
+  initTheme() {
+    const savedTheme = localStorage.getItem(this.THEME_KEY);
+    
+    if (savedTheme) {
+      // Load saved theme preference
+      if (savedTheme === 'dark') {
+        this.setDarkMode(true);
+      }
+    } else {
+      // Check system preference
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        this.setDarkMode(true);
+      }
+    }
+
+    // Listen for system theme changes
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        if (!localStorage.getItem(this.THEME_KEY)) {
+          this.setDarkMode(e.matches);
+        }
+      });
+    }
+  }
+
+  /**
+   * Set dark mode on/off
+   */
+  setDarkMode(isDark) {
+    const html = document.documentElement;
+    const body = document.body;
+    const themeButton = document.getElementById('themeToggle');
+
+    if (isDark) {
+      body.classList.add(this.DARK_MODE_CLASS);
+      localStorage.setItem(this.THEME_KEY, 'dark');
+      if (themeButton) themeButton.textContent = '☀️ Mode Terang';
+    } else {
+      body.classList.remove(this.DARK_MODE_CLASS);
+      localStorage.setItem(this.THEME_KEY, 'light');
+      if (themeButton) themeButton.textContent = '🌙 Mode Gelap';
+    }
+  }
+
+  /**
+   * Setup theme toggle button functionality
+   */
+  setupThemeToggle() {
+    const themeButton = document.getElementById('themeToggle');
+    if (themeButton) {
+      themeButton.addEventListener('click', () => {
+        const isDarkMode = document.body.classList.contains(this.DARK_MODE_CLASS);
+        this.setDarkMode(!isDarkMode);
+      });
+    }
+  }
+
+  /**
+   * Get current theme
+   */
+  getCurrentTheme() {
+    return document.body.classList.contains(this.DARK_MODE_CLASS) ? 'dark' : 'light';
+  }
+}
+
+// Initialize theme manager when DOM is ready
+let themeManager;
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    themeManager = new ThemeManager();
+  });
+} else {
+  themeManager = new ThemeManager();
+}
+
+/**
  * LocalStorage Availability Check
  * Requirements: 6.1, 6.2
  */
@@ -209,6 +300,55 @@ class GreetingModule {
   constructor(containerElement) {
     this.container = containerElement;
     this.currentTime = new Date();
+    this.userName = this.loadUserName();
+  }
+
+  /**
+   * Load user name from LocalStorage
+   * @returns {string} User name or empty string
+   */
+  loadUserName() {
+    if (!isLocalStorageAvailable()) {
+      return '';
+    }
+    
+    try {
+      const name = localStorage.getItem('productivity-username');
+      return name || '';
+    } catch (error) {
+      console.error('Failed to load user name:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Save user name to LocalStorage
+   * @param {string} name - User name to save
+   */
+  saveUserName(name) {
+    if (!isLocalStorageAvailable()) {
+      return;
+    }
+    
+    try {
+      if (name && name.trim()) {
+        localStorage.setItem('productivity-username', name.trim());
+      } else {
+        localStorage.removeItem('productivity-username');
+      }
+    } catch (error) {
+      console.error('Failed to save user name:', error);
+    }
+  }
+
+  /**
+   * Set user name and update display
+   * @param {string} name - User name
+   */
+  setUserName(name) {
+    this.userName = name ? name.trim() : '';
+    this.saveUserName(this.userName);
+    this.render();
   }
 
   /**
@@ -218,16 +358,24 @@ class GreetingModule {
    */
   getGreeting() {
     const hour = this.currentTime.getHours();
+    let greeting = '';
     
     if (hour >= 5 && hour <= 11) {
-      return 'Good Morning';
+      greeting = 'Good Morning';
     } else if (hour >= 12 && hour <= 17) {
-      return 'Good Afternoon';
+      greeting = 'Good Afternoon';
     } else if (hour >= 18 && hour <= 21) {
-      return 'Good Evening';
+      greeting = 'Good Evening';
     } else {
-      return 'Good Night';
+      greeting = 'Good Night';
     }
+    
+    // Add user name if set
+    if (this.userName) {
+      greeting += `, ${this.userName}`;
+    }
+    
+    return greeting;
   }
 
   /**
@@ -273,6 +421,12 @@ class GreetingModule {
     greetingText.className = 'greeting-text';
     greetingText.textContent = greeting;
     
+    // Add edit name button
+    const editNameBtn = document.createElement('button');
+    editNameBtn.className = 'edit-name-btn';
+    editNameBtn.textContent = this.userName ? 'Change Name' : 'Set Name';
+    editNameBtn.addEventListener('click', () => this.showNameModal());
+    
     const timeDisplay = document.createElement('div');
     timeDisplay.className = 'time-display';
     timeDisplay.textContent = timeString;
@@ -282,10 +436,134 @@ class GreetingModule {
     dateDisplay.textContent = dateString;
     
     contentDiv.appendChild(greetingText);
+    contentDiv.appendChild(editNameBtn);
     contentDiv.appendChild(timeDisplay);
     contentDiv.appendChild(dateDisplay);
     
     this.container.appendChild(contentDiv);
+  }
+
+  /**
+   * Show modal to set/change user name
+   */
+  showNameModal() {
+    // Create modal overlay
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay';
+    
+    // Create modal container
+    const modal = document.createElement('div');
+    modal.className = 'modal-container';
+    
+    // Create modal header
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'modal-header';
+    
+    const modalTitle = document.createElement('h3');
+    modalTitle.textContent = 'Set Your Name';
+    modalHeader.appendChild(modalTitle);
+    
+    // Create modal body
+    const modalBody = document.createElement('div');
+    modalBody.className = 'modal-body';
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'modal-input';
+    input.value = this.userName;
+    input.placeholder = 'Enter your name';
+    input.maxLength = 50;
+    
+    const charCount = document.createElement('div');
+    charCount.className = 'modal-char-count';
+    charCount.textContent = `${this.userName.length}/50`;
+    
+    input.addEventListener('input', () => {
+      charCount.textContent = `${input.value.length}/50`;
+    });
+    
+    modalBody.appendChild(input);
+    modalBody.appendChild(charCount);
+    
+    // Create modal footer
+    const modalFooter = document.createElement('div');
+    modalFooter.className = 'modal-footer';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'modal-btn modal-btn-cancel';
+    cancelBtn.textContent = 'Cancel';
+    
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'modal-btn modal-btn-save';
+    saveBtn.textContent = 'Save';
+    
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'modal-btn modal-btn-secondary';
+    clearBtn.textContent = 'Clear';
+    
+    modalFooter.appendChild(clearBtn);
+    modalFooter.appendChild(cancelBtn);
+    modalFooter.appendChild(saveBtn);
+    
+    // Assemble modal
+    modal.appendChild(modalHeader);
+    modal.appendChild(modalBody);
+    modal.appendChild(modalFooter);
+    modalOverlay.appendChild(modal);
+    
+    // Add to document
+    document.body.appendChild(modalOverlay);
+    
+    // Focus input and select text
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 100);
+    
+    // Close modal function
+    const closeModal = () => {
+      modalOverlay.remove();
+    };
+    
+    // Cancel button handler
+    cancelBtn.addEventListener('click', closeModal);
+    
+    // Click outside to close
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) {
+        closeModal();
+      }
+    });
+    
+    // Clear button handler
+    clearBtn.addEventListener('click', () => {
+      this.setUserName('');
+      closeModal();
+    });
+    
+    // Save button handler
+    const saveName = () => {
+      const name = input.value.trim();
+      this.setUserName(name);
+      closeModal();
+    };
+    
+    saveBtn.addEventListener('click', saveName);
+    
+    // Enter key to save
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        saveName();
+      }
+    });
+    
+    // Escape key to cancel
+    document.addEventListener('keydown', function escapeHandler(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+        document.removeEventListener('keydown', escapeHandler);
+      }
+    });
   }
 }
 
@@ -304,17 +582,6 @@ class FocusTimer {
     this.timeRemaining = this.defaultDuration;
     this.isRunning = false;
     this.intervalId = null;
-    
-    // Preset durations in seconds
-    this.presets = [
-      { name: '5 min', duration: 300 },
-      { name: '10 min', duration: 600 },
-      { name: '15 min', duration: 900 },
-      { name: '25 min', duration: 1500 },
-      { name: '30 min', duration: 1800 },
-      { name: '45 min', duration: 2700 },
-      { name: '60 min', duration: 3600 }
-    ];
   }
 
   /**
@@ -341,6 +608,10 @@ class FocusTimer {
     }
     
     this.isRunning = true;
+    const display = this.container.querySelector('.timer-display');
+    if (display) {
+      display.classList.add('running');
+    }
     this.intervalId = setInterval(() => this.tick(), 1000);
     this.updateButtonStates();
   }
@@ -356,6 +627,10 @@ class FocusTimer {
     }
     
     this.isRunning = false;
+    const display = this.container.querySelector('.timer-display');
+    if (display) {
+      display.classList.remove('running');
+    }
     if (this.intervalId !== null) {
       clearInterval(this.intervalId);
       this.intervalId = null;
@@ -386,6 +661,28 @@ class FocusTimer {
     
     this.defaultDuration = seconds;
     this.timeRemaining = seconds;
+    this.updateDisplay();
+    this.updateButtonStates();
+  }
+
+  /**
+   * Set custom timer duration from minutes and seconds
+   * @param {number} minutes - Duration in minutes
+   * @param {number} seconds - Duration in seconds
+   */
+  setCustomDuration(minutes, seconds) {
+    if (this.isRunning) {
+      return; // Don't allow changing duration while timer is running
+    }
+    
+    const totalSeconds = (minutes * 60) + seconds;
+    
+    if (totalSeconds <= 0) {
+      return; // Prevent setting invalid durations
+    }
+    
+    this.defaultDuration = totalSeconds;
+    this.timeRemaining = totalSeconds;
     this.updateDisplay();
     this.updateButtonStates();
   }
@@ -441,7 +738,6 @@ class FocusTimer {
     const startBtn = this.container.querySelector('.btn-start');
     const stopBtn = this.container.querySelector('.btn-stop');
     const resetBtn = this.container.querySelector('.btn-reset');
-    const presetBtns = this.container.querySelectorAll('.btn-preset');
     
     if (startBtn) {
       startBtn.disabled = this.isRunning || this.timeRemaining <= 0;
@@ -452,11 +748,6 @@ class FocusTimer {
     if (resetBtn) {
       resetBtn.disabled = this.isRunning;
     }
-    
-    // Disable preset buttons while timer is running
-    presetBtns.forEach(btn => {
-      btn.disabled = this.isRunning;
-    });
   }
 
   /**
@@ -478,32 +769,54 @@ class FocusTimer {
     title.className = 'timer-title';
     title.textContent = 'Focus Timer';
     
-    // Create preset duration buttons
-    const presetsDiv = document.createElement('div');
-    presetsDiv.className = 'timer-presets';
+    // Create custom input section
+    const customInputDiv = document.createElement('div');
+    customInputDiv.className = 'timer-custom-input';
     
-    this.presets.forEach(preset => {
-      const presetBtn = document.createElement('button');
-      presetBtn.className = 'btn-preset';
-      presetBtn.textContent = preset.name;
-      presetBtn.setAttribute('data-duration', preset.duration);
+    const customLabel = document.createElement('label');
+    customLabel.className = 'timer-custom-label';
+    customLabel.textContent = 'Custom Time:';
+    
+    const minutesInput = document.createElement('input');
+    minutesInput.type = 'number';
+    minutesInput.className = 'timer-custom-min-input';
+    minutesInput.min = '0';
+    minutesInput.max = '99';
+    minutesInput.value = Math.floor(this.defaultDuration / 60);
+    minutesInput.disabled = this.isRunning;
+    
+    const separator = document.createElement('span');
+    separator.className = 'timer-custom-separator';
+    separator.textContent = ':';
+    
+    const secondsInput = document.createElement('input');
+    secondsInput.type = 'number';
+    secondsInput.className = 'timer-custom-sec-input';
+    secondsInput.min = '0';
+    secondsInput.max = '59';
+    secondsInput.value = String(this.defaultDuration % 60).padStart(2, '0');
+    secondsInput.disabled = this.isRunning;
+    
+    const setBtn = document.createElement('button');
+    setBtn.className = 'timer-custom-set-btn';
+    setBtn.textContent = 'Set';
+    setBtn.disabled = this.isRunning;
+    
+    setBtn.addEventListener('click', () => {
+      const mins = parseInt(minutesInput.value) || 0;
+      const secs = parseInt(secondsInput.value) || 0;
+      this.setCustomDuration(mins, secs);
       
-      // Highlight active preset
-      if (preset.duration === this.defaultDuration) {
-        presetBtn.classList.add('active');
-      }
-      
-      presetBtn.addEventListener('click', () => {
-        this.setDuration(preset.duration);
-        // Update active state
-        presetsDiv.querySelectorAll('.btn-preset').forEach(btn => {
-          btn.classList.remove('active');
-        });
-        presetBtn.classList.add('active');
-      });
-      
-      presetsDiv.appendChild(presetBtn);
+      // Update input values to reflect actual set duration
+      minutesInput.value = Math.floor(this.defaultDuration / 60);
+      secondsInput.value = String(this.defaultDuration % 60).padStart(2, '0');
     });
+    
+    customInputDiv.appendChild(customLabel);
+    customInputDiv.appendChild(minutesInput);
+    customInputDiv.appendChild(separator);
+    customInputDiv.appendChild(secondsInput);
+    customInputDiv.appendChild(setBtn);
     
     const display = document.createElement('div');
     display.className = 'timer-display';
@@ -533,7 +846,7 @@ class FocusTimer {
     controls.appendChild(resetBtn);
     
     contentDiv.appendChild(title);
-    contentDiv.appendChild(presetsDiv);
+    contentDiv.appendChild(customInputDiv);
     contentDiv.appendChild(display);
     contentDiv.appendChild(controls);
     
